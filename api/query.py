@@ -68,8 +68,7 @@ class handler(BaseHTTPRequestHandler):
             
             # Configurar el modelo de lenguaje
             llm = ChatOpenAI(
-                model="gpt-4-turbo-preview",
-                temperature=0,
+                model="gpt-5-nano",
                 openai_api_key=api_key
             )
             
