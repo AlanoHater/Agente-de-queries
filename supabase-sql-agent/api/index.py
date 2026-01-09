@@ -46,7 +46,7 @@ agent = create_sql_agent(
     prefix=SQL_PREFIX,
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
-    handle_parsing_errors=True
+    agent_executor_kwargs={"handle_parsing_errors": True} 
 )
 
 @app.route("/api/index", methods=["POST"])
