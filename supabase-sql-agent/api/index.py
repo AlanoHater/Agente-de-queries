@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain.agents.agent_types import AgentType
 from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool 
 
 # Carga de variables de entorno
 load_dotenv()
@@ -18,7 +19,8 @@ CORS(app)
 # Asegúrate de configurar SUPABASE_DB_URL en el dashboard de Vercel
 db = SQLDatabase.from_uri(
     os.getenv("SUPABASE_DB_URL"), 
-    sample_rows_in_table_info=3
+    sample_rows_in_table_info=3,
+    engine_args={"poolclass": NullPool} # [NUEVO] Desactiva persistencia de conexiones
 )
 
 # Configuración de GPT-5 Nano
