@@ -1,8 +1,0 @@
-langchain==0.1.0
-langchain-community
-langchain-openai
-openai
-psycopg2-binary
-python-dotenv
-flask
-flask-cors
