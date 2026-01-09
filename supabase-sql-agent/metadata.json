@@ -1,0 +1,5 @@
+{
+  "name": "Supabase SQL Agent",
+  "description": "A robust SQL Agent interface using LangChain and OpenAI to query Supabase databases via natural language.",
+  "requestFramePermissions": []
+}
