@@ -1,4 +1,5 @@
 import os
+from langchain_openai import ChatOpenAI
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from langchain_community.utilities import SQLDatabase
@@ -43,7 +44,7 @@ agent = create_sql_agent(
     db=db,
     prefix=SQL_PREFIX,
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=False,
+    verbose=True,
     handle_parsing_errors=True
 )
 
