@@ -27,7 +27,6 @@ db = SQLDatabase.from_uri(
 # Modelo optimizado para baja latencia y alta eficiencia
 llm = ChatOpenAI(
     model="gpt-5-nano", 
-    temperature=0,
     openai_api_key=os.getenv("OPENAI_API_KEY")
 )
 
