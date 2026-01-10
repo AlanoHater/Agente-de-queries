@@ -1,29 +1,13 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "api/query.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxDuration": 30
-      }
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+  "functions": {
+    "api/*.py": {
+      "maxDuration": 30
     }
-  ]
+  }
 }
