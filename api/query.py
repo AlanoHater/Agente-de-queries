@@ -1,79 +1,106 @@
 """
-Función serverless para procesar consultas SQL mediante lenguaje natural.
-Compatible con Vercel Serverless Functions.
+Función serverless optimizada para Vercel con GPT-5 nano.
+Compatible con el sistema serverless de Vercel.
 """
 
 import os
 import json
-from http.server import BaseHTTPRequestHandler
 from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits import create_sql_agent
 from sqlalchemy.pool import NullPool
 
-class handler(BaseHTTPRequestHandler):
-    """Handler para Vercel Serverless Functions"""
+def handler(request):
+    """
+    Handler principal para Vercel Serverless Functions.
+    Procesa consultas SQL mediante lenguaje natural usando GPT-5 nano.
+    """
     
-    def _set_headers(self, status=200):
-        """Configura los headers CORS y el tipo de contenido"""
-        self.send_response(status)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
+    # Manejar peticiones OPTIONS para CORS
+    if request.method == 'OPTIONS':
+        return {
+            'statusCode': 204,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            }
+        }
     
-    def do_OPTIONS(self):
-        """Maneja las peticiones OPTIONS para CORS preflight"""
-        self._set_headers(204)
+    # Solo aceptar peticiones POST
+    if request.method != 'POST':
+        return {
+            'statusCode': 405,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+            },
+            'body': json.dumps({
+                'output': 'Método no permitido. Use POST.',
+                'error': True
+            })
+        }
     
-    def do_POST(self):
-        """Procesa las peticiones POST con consultas en lenguaje natural"""
-        try:
-            # Leer el cuerpo de la petición
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            user_query = data.get('query', '').strip()
-            
-            if not user_query:
-                self._set_headers(400)
-                response = {
+    try:
+        # Obtener datos del request
+        if hasattr(request, 'get_json'):
+            data = request.get_json()
+        elif hasattr(request, 'json'):
+            data = request.json
+        else:
+            body = request.body
+            if isinstance(body, bytes):
+                body = body.decode('utf-8')
+            data = json.loads(body) if body else {}
+        
+        user_query = data.get('query', '').strip()
+        
+        if not user_query:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({
                     'output': 'Error: No se recibió ninguna consulta válida.',
                     'error': True
-                }
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-                return
-            
-            # Validar variables de entorno
-            db_url = os.getenv('SUPABASE_DB_URL')
-            api_key = os.getenv('OPENAI_API_KEY')
-            
-            if not db_url or not api_key:
-                self._set_headers(500)
-                response = {
-                    'output': 'Error de configuración: Faltan variables de entorno necesarias.',
+                })
+            }
+        
+        # Validar variables de entorno
+        db_url = os.getenv('SUPABASE_DB_URL')
+        api_key = os.getenv('OPENAI_API_KEY')
+        
+        if not db_url or not api_key:
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({
+                    'output': 'Error de configuración: Faltan variables de entorno necesarias (SUPABASE_DB_URL o OPENAI_API_KEY).',
                     'error': True
-                }
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-                return
-            
-            # Configurar conexión a la base de datos
-            db = SQLDatabase.from_uri(
-                db_url,
-                sample_rows_in_table_info=3,
-                engine_args={"poolclass": NullPool}
-            )
-            
-            # Configurar el modelo de lenguaje
-            llm = ChatOpenAI(
-                model="gpt-5-nano",
-                openai_api_key=api_key
-            )
-            
-            # Definir el prompt del sistema
-            system_prefix = """Eres un experto en SQL y PostgreSQL trabajando con una base de datos Supabase.
+                })
+            }
+        
+        # Configurar conexión a la base de datos
+        db = SQLDatabase.from_uri(
+            db_url,
+            sample_rows_in_table_info=3,
+            engine_args={"poolclass": NullPool}
+        )
+        
+        # Configurar GPT-5 nano con snapshot específico
+        llm = ChatOpenAI(
+            model="gpt-5-nano-2025-08-07",
+            openai_api_key=api_key,
+            max_retries=2
+        )
+        
+        # Definir el prompt del sistema
+        system_prefix = """Eres un experto en SQL y PostgreSQL trabajando con una base de datos Supabase.
 
 REGLAS ESTRICTAS:
 1. SOLO puedes ejecutar consultas SELECT y COUNT. Está PROHIBIDO usar INSERT, UPDATE, DELETE, DROP, ALTER, CREATE o cualquier otra operación de modificación.
@@ -88,34 +115,56 @@ FORMATO DE RESPUESTA:
 - Luego presenta los resultados de manera clara
 - Finalmente, proporciona un breve resumen o conclusión
 """
-            
-            # Crear el agente SQL
-            agent = create_sql_agent(
-                llm=llm,
-                db=db,
-                agent_type="openai-tools",
-                prefix=system_prefix,
-                verbose=False,
-                handle_parsing_errors=True,
-                max_iterations=5
-            )
-            
-            # Ejecutar la consulta
-            result = agent.invoke({"input": user_query})
-            
-            # Enviar respuesta exitosa
-            self._set_headers(200)
-            response = {
+        
+        # Crear el agente SQL
+        agent = create_sql_agent(
+            llm=llm,
+            db=db,
+            agent_type="openai-tools",
+            prefix=system_prefix,
+            verbose=False,
+            handle_parsing_errors=True,
+            max_iterations=5
+        )
+        
+        # Ejecutar la consulta
+        result = agent.invoke({"input": user_query})
+        
+        # Retornar respuesta exitosa
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*',
+            },
+            'body': json.dumps({
                 'output': result.get('output', 'No se obtuvo respuesta del agente.'),
                 'error': False
-            }
-            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
-            
-        except Exception as e:
-            # Manejo de errores
-            self._set_headers(500)
-            response = {
-                'output': f'Error al procesar la consulta: {str(e)}',
+            }, ensure_ascii=False)
+        }
+        
+    except Exception as e:
+        # Manejo de errores con detalles
+        error_message = str(e)
+        
+        # Proporcionar mensajes de error más específicos
+        if 'api_key' in error_message.lower():
+            error_message = 'Error de autenticación con OpenAI. Verifica que tu API key sea válida.'
+        elif 'connection' in error_message.lower() or 'database' in error_message.lower():
+            error_message = 'Error de conexión con la base de datos. Verifica la URL de Supabase.'
+        elif 'timeout' in error_message.lower():
+            error_message = 'La consulta tardó demasiado tiempo. Intenta con una consulta más simple.'
+        else:
+            error_message = f'Error al procesar la consulta: {error_message}'
+        
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*',
+            },
+            'body': json.dumps({
+                'output': error_message,
                 'error': True
-            }
-            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            }, ensure_ascii=False)
+        }
