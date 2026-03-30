@@ -25,14 +25,6 @@ Requisitos
 - Git
 - (Opcional) Docker si prefieres contenerizar la aplicación
 
-Estructura sugerida
--------------------
-Nota: adapta estos nombres a la estructura real del repositorio si difiere.
-- /backend — código Python (APIs, procesamiento, pruebas)
-- /frontend — app TypeScript (UI, bundler, tests)
-- /docs — documentación complementaria
-- /scripts — utilidades y scripts de despliegue
-
 Instalación (local)
 -------------------
 1. Clonar el repositorio:
@@ -111,23 +103,3 @@ Despliegue
 - Puedes desplegar cada parte por separado: backend (Heroku, Railway, AWS, Docker) y frontend (Vercel, Netlify, static hosting).
 - Alternativamente, crear una imagen Docker multi-stage para backend + frontend y desplegar en un contenedor.
 
-Contribuir
-----------
-1. Haz fork del repositorio.
-2. Crea una rama descriptiva: git checkout -b feature/nombre-de-la-característica
-3. Haz commits pequeños y claros.
-4. Abre un Pull Request describiendo los cambios.
-5. Añade pruebas cuando sea posible.
-
-Licencia
---------
-Incluye un archivo `LICENSE` en la raíz del repositorio. Si aún no has decidido una licencia, una opción común es MIT. Sustituye o ajusta según lo desees.
-
-Contacto
---------
-Si tienes dudas o quieres colaborar, abre un issue o contacta a los mantenedores a través de GitHub: https://github.com/AlanoHater/Agente-de-queries
-
-Recursos adicionales
---------------------
-- Añade en /docs ejemplos de uso, endpoints disponibles, formato de las queries y ejemplos de payloads/response.
-- Incluye un `CONTRIBUTING.md` con estándares de commits y flujo Git si esperas contribuciones externas.
